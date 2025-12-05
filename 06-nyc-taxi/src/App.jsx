@@ -130,15 +130,31 @@ function getTaxiPosition(trip, currentTime) {
   return null;
 }
 
+// Smoothly interpolate between angles (handling 360 wraparound)
+function lerpAngle(from, to, t) {
+  let diff = to - from;
+  // Handle wraparound
+  while (diff > 180) diff -= 360;
+  while (diff < -180) diff += 360;
+  return from + diff * t;
+}
+
 export default function App() {
   const [time, setTime] = useState(0);
   const [trip, setTrip] = useState(null);
   const [buildings, setBuildings] = useState([]);
   const [timeRange, setTimeRange] = useState({ start: 0, end: 1800 });
   const [isPlaying, setIsPlaying] = useState(true);
-  const [speed, setSpeed] = useState(1);
+  const [speed, setSpeed] = useState(0.5);
   const [followCamera, setFollowCamera] = useState(true);
   const animationRef = useRef(null);
+
+  // Smooth camera state
+  const [smoothCamera, setSmoothCamera] = useState({
+    longitude: INITIAL_VIEW_STATE.longitude,
+    latitude: INITIAL_VIEW_STATE.latitude,
+    bearing: INITIAL_VIEW_STATE.bearing
+  });
 
   const trailLength = 180;
 
@@ -214,20 +230,42 @@ export default function App() {
 
   const taxiData = taxiPosition ? [taxiPosition] : [];
 
+  // Smooth camera follow effect
+  useEffect(() => {
+    if (!followCamera || !taxiPosition) return;
+
+    const targetLng = taxiPosition.position[0];
+    const targetLat = taxiPosition.position[1];
+    const targetBearing = -taxiPosition.bearing;
+
+    // Smoothing factor (0.02 = very smooth/slow, 0.1 = faster response)
+    const smoothing = 0.02;
+
+    const updateCamera = () => {
+      setSmoothCamera(prev => ({
+        longitude: prev.longitude + (targetLng - prev.longitude) * smoothing,
+        latitude: prev.latitude + (targetLat - prev.latitude) * smoothing,
+        bearing: lerpAngle(prev.bearing, targetBearing, smoothing)
+      }));
+    };
+
+    updateCamera();
+  }, [followCamera, taxiPosition]);
+
   // Calculate view state - follow taxi if enabled
   const viewState = useMemo(() => {
     if (followCamera && taxiPosition) {
       return {
-        longitude: taxiPosition.position[0],
-        latitude: taxiPosition.position[1],
+        longitude: smoothCamera.longitude,
+        latitude: smoothCamera.latitude,
         zoom: 17,
         pitch: 60,
-        bearing: -taxiPosition.bearing,
+        bearing: smoothCamera.bearing,
         transitionDuration: 0
       };
     }
     return INITIAL_VIEW_STATE;
-  }, [followCamera, taxiPosition]);
+  }, [followCamera, taxiPosition, smoothCamera]);
 
   // Get just the followed trip for the trail
   const tripData = trip ? [trip] : [];
@@ -275,9 +313,10 @@ export default function App() {
       id: 'taxi',
       data: taxiData,
       scenegraph: '/taxi/scene.gltf',
-      getPosition: d => d.position,
+      getPosition: d => [...d.position, 0],
       getOrientation: d => [0, 180 - d.bearing, 90],
       sizeScale: 3,
+      getTranslation: [-10, -5, -1],
       _lighting: 'pbr'
     })
   ];
