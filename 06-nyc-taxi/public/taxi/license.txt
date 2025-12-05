@@ -1,0 +1,11 @@
+Model Information:
+* title:	Taxi stylized lowpoly
+* source:	https://sketchfab.com/3d-models/taxi-stylized-lowpoly-7bfb46d51c3a432ca6b33b439f4dea1e
+* author:	Bogdan Strielecki (https://sketchfab.com/strielecki)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Taxi stylized lowpoly" (https://sketchfab.com/3d-models/taxi-stylized-lowpoly-7bfb46d51c3a432ca6b33b439f4dea1e) by Bogdan Strielecki (https://sketchfab.com/strielecki) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
