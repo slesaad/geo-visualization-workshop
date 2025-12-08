@@ -13,7 +13,20 @@ const BODIES = {
     rotationPeriod: 27, // days
     color: 'https://upload.wikimedia.org/wikipedia/commons/c/cb/Solarsystemscope_texture_2k_sun.jpg',
     emissive: true,
-    info: 'The Sun - Center of our solar system, a G-type main-sequence star'
+    info: 'The Sun - Center of our solar system, a G-type main-sequence star',
+    // Detail panel data
+    type: 'Star',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/b/b4/The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory_-_20100819.jpg',
+    description: 'The Sun is the star at the center of our Solar System. It is a nearly perfect ball of hot plasma, heated to incandescence by nuclear fusion reactions in its core. The Sun radiates energy mainly as visible light, ultraviolet light, and infrared radiation.',
+    stats: {
+      'Diameter': '1.39 million km',
+      'Mass': '1.989 × 10³⁰ kg',
+      'Surface Temp': '5,500°C',
+      'Core Temp': '15 million°C',
+      'Age': '4.6 billion years',
+      'Type': 'G-type main-sequence'
+    },
+    facts: 'The Sun contains 99.86% of the mass in the Solar System. Light from the Sun takes about 8 minutes to reach Earth. The Sun rotates faster at its equator than at its poles.'
   },
   earth: {
     name: 'Earth',
@@ -24,7 +37,20 @@ const BODIES = {
     color: '/textures/earth-texture.jpg',
     bumpMap: '/textures/8081_earthbump2k.jpg',
     bumpScale: 10.0,
-    info: 'Earth - Our home planet, third from the Sun'
+    info: 'Earth - Our home planet, third from the Sun',
+    // Detail panel data
+    type: 'Terrestrial Planet',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/c/cb/The_Blue_Marble_%28remastered%29.jpg',
+    description: 'Earth is the third planet from the Sun and the only astronomical object known to harbor life. About 71% of Earth\'s surface is water, and the remaining 29% is land consisting of continents and islands.',
+    stats: {
+      'Diameter': '12,742 km',
+      'Mass': '5.97 × 10²⁴ kg',
+      'Avg Temp': '15°C',
+      'Moons': '1',
+      'Day Length': '24 hours',
+      'Year Length': '365.25 days'
+    },
+    facts: 'Earth is the densest planet in the Solar System. It\'s the only planet not named after a Greek or Roman deity. Earth\'s atmosphere protects us from meteoroids and radiation from the Sun.'
   },
   moon: {
     name: 'Moon',
@@ -36,7 +62,20 @@ const BODIES = {
     color: '/textures/lroc_color_poles_4k.tif',
     bumpMap: '/textures/ldem_16.tif',
     bumpScale: 0.1,
-    info: 'The Moon - Earth\'s only natural satellite'
+    info: 'The Moon - Earth\'s only natural satellite',
+    // Detail panel data
+    type: 'Natural Satellite',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/e/e1/FullMoon2010.jpg',
+    description: 'The Moon is Earth\'s only natural satellite. It is the fifth largest satellite in the Solar System and the largest and most massive relative to its parent planet. The Moon is thought to have formed about 4.51 billion years ago from debris after a giant impact.',
+    stats: {
+      'Diameter': '3,474 km',
+      'Mass': '7.35 × 10²² kg',
+      'Surface Temp': '-233 to 123°C',
+      'Distance': '384,400 km',
+      'Orbital Period': '27.3 days',
+      'Surface Gravity': '1.62 m/s²'
+    },
+    facts: 'The Moon is gradually moving away from Earth at about 3.8 cm per year. It\'s tidally locked, meaning we always see the same side. The Moon has no atmosphere, so footprints left by astronauts will last millions of years.'
   },
   mars: {
     name: 'Mars',
@@ -49,7 +88,20 @@ const BODIES = {
     normalMap: '/textures/mars_1k_normal.jpg',
     bumpScale: 10.0,
     normalScale: 5.0,
-    info: 'Mars - The Red Planet, fourth from the Sun'
+    info: 'Mars - The Red Planet, fourth from the Sun',
+    // Detail panel data
+    type: 'Terrestrial Planet',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/0/0c/Mars_-_August_30_2021_-_Flickr_-_Kevin_M._Gill.png',
+    description: 'Mars is the fourth planet from the Sun and the second-smallest planet in the Solar System. It is often called the "Red Planet" because iron oxide on its surface gives it a reddish appearance. Mars has the largest volcano and canyon in the Solar System.',
+    stats: {
+      'Diameter': '6,779 km',
+      'Mass': '6.39 × 10²³ kg',
+      'Avg Temp': '-65°C',
+      'Moons': '2',
+      'Day Length': '24h 37m',
+      'Year Length': '687 days'
+    },
+    facts: 'Mars is home to Olympus Mons, the tallest volcano in the Solar System at 21.9 km high. Valles Marineris, a system of canyons, is over 4,000 km long. Mars has seasons like Earth because of its similar axial tilt.'
   }
 };
 
@@ -101,6 +153,97 @@ const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.5 });
 const stars = new THREE.Points(starGeometry, starMaterial);
 scene.add(stars);
 
+// Sun corona/halo with flares
+const sunCoronaGroup = new THREE.Group();
+scene.add(sunCoronaGroup);
+
+// Create corona glow shader material
+const coronaVertexShader = `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const coronaFragmentShader = `
+  uniform float time;
+  varying vec2 vUv;
+
+  // Noise function for organic look
+  float noise(vec2 p) {
+    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+  }
+
+  float smoothNoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+
+    float a = noise(i);
+    float b = noise(i + vec2(1.0, 0.0));
+    float c = noise(i + vec2(0.0, 1.0));
+    float d = noise(i + vec2(1.0, 1.0));
+
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+  }
+
+  float fbm(vec2 p) {
+    float value = 0.0;
+    float amplitude = 0.5;
+    for (int i = 0; i < 4; i++) {
+      value += amplitude * smoothNoise(p);
+      p *= 2.0;
+      amplitude *= 0.5;
+    }
+    return value;
+  }
+
+  void main() {
+    vec2 center = vUv - 0.5;
+    float dist = length(center);
+    float angle = atan(center.y, center.x);
+
+    // Base corona falloff
+    float corona = 1.0 - smoothstep(0.0, 0.5, dist);
+    corona = pow(corona, 2.0);
+
+    // Add animated noise for organic feel
+    float noiseVal = fbm(vec2(angle * 3.0, dist * 5.0 - time * 0.5));
+    corona *= 0.7 + 0.3 * noiseVal;
+
+    // Red-orange color gradient
+    vec3 innerColor = vec3(1.0, 0.3, 0.1);  // Red-orange
+    vec3 outerColor = vec3(1.0, 0.1, 0.0);  // Deep red
+    vec3 color = mix(outerColor, innerColor, corona);
+
+    // Add some yellow near the center
+    color = mix(color, vec3(1.0, 0.6, 0.2), pow(corona, 3.0));
+
+    gl_FragColor = vec4(color, corona * 0.6);
+  }
+`;
+
+const coronaMaterial = new THREE.ShaderMaterial({
+  uniforms: {
+    time: { value: 0.0 }
+  },
+  vertexShader: coronaVertexShader,
+  fragmentShader: coronaFragmentShader,
+  transparent: true,
+  blending: THREE.AdditiveBlending,
+  side: THREE.DoubleSide,
+  depthWrite: false
+});
+
+// Create corona plane (billboard that faces camera)
+const coronaGeometry = new THREE.PlaneGeometry(25, 25);
+const coronaMesh = new THREE.Mesh(coronaGeometry, coronaMaterial);
+sunCoronaGroup.add(coronaMesh);
+
+// Store reference for animation
+let sunCorona = coronaMesh;
+
 // Texture loaders
 const textureLoader = new THREE.TextureLoader();
 const tiffLoader = new TIFFLoader();
@@ -117,6 +260,7 @@ async function loadTexture(url) {
 // Store celestial body meshes and their orbit data
 const celestialBodies = {};
 const orbitLines = {};
+const bodyLabels = {};
 
 // Create orbit path visualization
 function createOrbitLine(radius, color = 0x444444) {
@@ -248,12 +392,119 @@ async function createBody(id, config) {
   return mesh;
 }
 
+// Create HTML label for a celestial body
+function createLabel(id, config) {
+  const container = document.getElementById('labels-container');
+
+  const label = document.createElement('div');
+  label.className = 'body-label';
+  label.dataset.bodyId = id;
+
+  label.innerHTML = `
+    <div class="label-outline"></div>
+    <div class="label-name">${config.name}</div>
+  `;
+
+  // Click handler
+  label.addEventListener('click', () => {
+    flyTo(id);
+  });
+
+  container.appendChild(label);
+  bodyLabels[id] = {
+    element: label,
+    outline: label.querySelector('.label-outline'),
+    name: label.querySelector('.label-name')
+  };
+}
+
+// Update label positions to follow celestial bodies
+function updateLabels() {
+  for (const [id, body] of Object.entries(celestialBodies)) {
+    const labelData = bodyLabels[id];
+    if (!labelData) continue;
+
+    const { element, outline, name } = labelData;
+
+    // Get world position of the body center
+    const worldPos = new THREE.Vector3();
+    body.mesh.getWorldPosition(worldPos);
+
+    // Project center to screen
+    const centerScreen = worldPos.clone().project(camera);
+
+    // Check if body is behind camera
+    if (centerScreen.z > 1) {
+      element.style.display = 'none';
+      continue;
+    }
+
+    // Calculate screen-space size of the body by projecting points at the radius
+    const radius = body.config.radius;
+
+    // Get a point at the top of the sphere (in world space)
+    const topPos = worldPos.clone();
+    topPos.y += radius;
+    const topScreen = topPos.clone().project(camera);
+
+    // Get a point at the right of the sphere (in world space, camera-facing)
+    const cameraDir = new THREE.Vector3();
+    camera.getWorldDirection(cameraDir);
+    const rightDir = new THREE.Vector3().crossVectors(camera.up, cameraDir).normalize();
+    const rightPos = worldPos.clone().add(rightDir.multiplyScalar(radius));
+    const rightScreen = rightPos.clone().project(camera);
+
+    // Convert to pixel coordinates
+    const centerX = (centerScreen.x * 0.5 + 0.5) * window.innerWidth;
+    const centerY = (-centerScreen.y * 0.5 + 0.5) * window.innerHeight;
+    const topY = (-topScreen.y * 0.5 + 0.5) * window.innerHeight;
+    const rightX = (rightScreen.x * 0.5 + 0.5) * window.innerWidth;
+
+    // Calculate box size with some padding
+    const halfHeight = Math.abs(centerY - topY) * 1.3;
+    const halfWidth = Math.abs(rightX - centerX) * 1.3;
+    const boxSize = Math.max(halfWidth, halfHeight) * 2;
+
+    // Minimum size so small/distant bodies are still visible
+    const minSize = 40;
+    const finalSize = Math.max(boxSize, minSize);
+
+    // Hide if off screen
+    if (centerX < -finalSize || centerX > window.innerWidth + finalSize ||
+        centerY < -finalSize || centerY > window.innerHeight + finalSize) {
+      element.style.display = 'none';
+      continue;
+    }
+
+    element.style.display = 'block';
+
+    // Position the outline centered on the body
+    outline.style.width = `${finalSize}px`;
+    outline.style.height = `${finalSize}px`;
+    outline.style.left = `${centerX - finalSize / 2}px`;
+    outline.style.top = `${centerY - finalSize / 2}px`;
+
+    // Position the name label at top-right of the box
+    name.style.left = `${centerX + finalSize / 2 + 6}px`;
+    name.style.top = `${centerY - finalSize / 2}px`;
+
+    // Toggle selected class based on focus target
+    element.classList.toggle('selected', focusTarget === id);
+
+    // Fade based on distance (farther = more transparent)
+    const distance = camera.position.distanceTo(worldPos);
+    const opacity = Math.max(0.3, Math.min(1, 100 / distance));
+    element.style.opacity = opacity;
+  }
+}
+
 // Initialize all bodies
 async function init() {
   for (const [id, config] of Object.entries(BODIES)) {
     try {
       console.log(`Creating ${id}...`);
       await createBody(id, config);
+      createLabel(id, config);
       console.log(`${id} created successfully`);
     } catch (e) {
       console.error(`Failed to create ${id}:`, e);
@@ -280,6 +531,55 @@ const flyDuration = 1.5; // seconds
 // Raycaster for click detection
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
+
+// Detail panel elements
+const detailPanel = document.getElementById('detail-panel');
+const panelTitle = detailPanel.querySelector('.panel-title');
+const panelSubtitle = detailPanel.querySelector('.panel-subtitle');
+const panelImage = detailPanel.querySelector('.panel-image');
+const panelDescription = document.getElementById('panel-description');
+const panelStats = document.getElementById('panel-stats');
+const panelFacts = document.getElementById('panel-facts');
+const closeBtn = detailPanel.querySelector('.close-btn');
+
+// Open detail panel with body info
+function openDetailPanel(bodyId) {
+  const config = BODIES[bodyId];
+  if (!config) return;
+
+  // Update panel content
+  panelTitle.textContent = config.name;
+  panelSubtitle.textContent = config.type || '';
+  panelImage.src = config.image || '';
+  panelImage.alt = config.name;
+  panelDescription.textContent = config.description || '';
+  panelFacts.textContent = config.facts || '';
+
+  // Build stats grid
+  panelStats.innerHTML = '';
+  if (config.stats) {
+    for (const [label, value] of Object.entries(config.stats)) {
+      const statItem = document.createElement('div');
+      statItem.className = 'stat-item';
+      statItem.innerHTML = `
+        <div class="stat-label">${label}</div>
+        <div class="stat-value">${value}</div>
+      `;
+      panelStats.appendChild(statItem);
+    }
+  }
+
+  // Open panel
+  detailPanel.classList.add('open');
+}
+
+// Close detail panel
+function closeDetailPanel() {
+  detailPanel.classList.remove('open');
+}
+
+// Close button handler
+closeBtn.addEventListener('click', closeDetailPanel);
 
 function updatePositions(deltaTime) {
   if (isPaused) return;
@@ -371,6 +671,9 @@ function flyTo(bodyId) {
     infoTitle.textContent = bodyConfig.name;
     infoContent.textContent = bodyConfig.info;
   }
+
+  // Open detail panel
+  openDetailPanel(bodyId);
 }
 
 // Handle click on celestial bodies
@@ -435,14 +738,24 @@ function updateCamera(deltaTime) {
 
 // Animation loop
 const clock = new THREE.Clock();
+let elapsedTime = 0;
 
 function animate() {
   requestAnimationFrame(animate);
 
   const deltaTime = clock.getDelta();
+  elapsedTime += deltaTime;
 
   updatePositions(deltaTime);
   updateCamera(deltaTime);
+  updateLabels();
+
+  // Update sun corona - make it face camera (billboard) and animate
+  if (sunCorona) {
+    sunCorona.lookAt(camera.position);
+    coronaMaterial.uniforms.time.value = elapsedTime;
+  }
+
   controls.update();
 
   renderer.render(scene, camera);
