@@ -268,8 +268,18 @@ let viewScale = 1.0;
 let focusTarget = 'sun';
 let elapsedDays = 0;
 
-// Time scale: 1 second = 1 day (at speed 1.0)
-const TIME_SCALE = 1 / 60; // At 60fps, each frame = 1/60 of a day at speed 1.0
+// Camera fly-to animation state
+let isFlying = false;
+let flyStartPosition = new THREE.Vector3();
+let flyStartTarget = new THREE.Vector3();
+let flyEndPosition = new THREE.Vector3();
+let flyEndTarget = new THREE.Vector3();
+let flyProgress = 0;
+const flyDuration = 1.5; // seconds
+
+// Raycaster for click detection
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
 
 function updatePositions(deltaTime) {
   if (isPaused) return;
@@ -310,18 +320,117 @@ function updatePositions(deltaTime) {
   }
 }
 
-// Camera follow logic
-function updateCamera() {
-  if (focusTarget === 'free') return;
+// Smooth easing function
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
 
-  const body = celestialBodies[focusTarget];
+// Fly camera to a celestial body
+function flyTo(bodyId) {
+  const body = celestialBodies[bodyId];
   if (!body) return;
 
+  // Get target position
   const targetPos = new THREE.Vector3();
   body.mesh.getWorldPosition(targetPos);
 
-  // Smoothly move controls target to follow the body
-  controls.target.lerp(targetPos, 0.05);
+  // Calculate camera end position - close to the body, slightly above and to the side
+  const viewDistance = body.config.radius * 4 + 2; // Close enough to see detail
+
+  // Position camera at an angle (not straight on)
+  const cameraOffset = new THREE.Vector3(
+    viewDistance * 0.7,  // side offset
+    viewDistance * 0.5,  // above
+    viewDistance * 0.7   // front offset
+  );
+
+  flyEndTarget.copy(targetPos);
+  flyEndPosition.copy(targetPos).add(cameraOffset);
+
+  // Store start positions
+  flyStartPosition.copy(camera.position);
+  flyStartTarget.copy(controls.target);
+
+  // Start animation
+  isFlying = true;
+  flyProgress = 0;
+
+  // Update focus target
+  focusTarget = bodyId;
+
+  // Update UI
+  document.querySelectorAll('#focusButtons button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.target === bodyId);
+  });
+
+  // Update info panel
+  const bodyConfig = BODIES[bodyId];
+  const infoTitle = document.querySelector('.planet-info h4');
+  const infoContent = document.getElementById('infoContent');
+  if (bodyConfig) {
+    infoTitle.textContent = bodyConfig.name;
+    infoContent.textContent = bodyConfig.info;
+  }
+}
+
+// Handle click on celestial bodies
+function onCanvasClick(event) {
+  // Calculate mouse position in normalized device coordinates
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  // Update raycaster
+  raycaster.setFromCamera(mouse, camera);
+
+  // Get all celestial body meshes
+  const meshes = Object.values(celestialBodies).map(b => b.mesh);
+
+  // Check for intersections
+  const intersects = raycaster.intersectObjects(meshes);
+
+  if (intersects.length > 0) {
+    // Find which body was clicked
+    const clickedMesh = intersects[0].object;
+    for (const [id, body] of Object.entries(celestialBodies)) {
+      if (body.mesh === clickedMesh) {
+        flyTo(id);
+        break;
+      }
+    }
+  }
+}
+
+// Camera follow/fly logic
+function updateCamera(deltaTime) {
+  if (isFlying) {
+    // Animate fly-to
+    flyProgress += deltaTime / flyDuration;
+
+    if (flyProgress >= 1) {
+      flyProgress = 1;
+      isFlying = false;
+    }
+
+    const t = easeInOutCubic(flyProgress);
+
+    // Interpolate camera position and target
+    camera.position.lerpVectors(flyStartPosition, flyEndPosition, t);
+    controls.target.lerpVectors(flyStartTarget, flyEndTarget, t);
+  } else if (focusTarget !== 'free') {
+    // Follow the target body
+    const body = celestialBodies[focusTarget];
+    if (!body) return;
+
+    const targetPos = new THREE.Vector3();
+    body.mesh.getWorldPosition(targetPos);
+
+    // Smoothly move controls target to follow the body
+    controls.target.lerp(targetPos, 0.05);
+
+    // Keep camera at same relative offset
+    const offset = new THREE.Vector3().subVectors(camera.position, controls.target);
+    camera.position.copy(targetPos).add(offset);
+  }
 }
 
 // Animation loop
@@ -333,7 +442,7 @@ function animate() {
   const deltaTime = clock.getDelta();
 
   updatePositions(deltaTime);
-  updateCamera();
+  updateCamera(deltaTime);
   controls.update();
 
   renderer.render(scene, camera);
@@ -375,30 +484,27 @@ document.getElementById('scaleSlider').addEventListener('input', (e) => {
   }
 });
 
-// Focus buttons
+// Focus buttons - use flyTo for smooth animation
 document.querySelectorAll('#focusButtons button').forEach(btn => {
   btn.addEventListener('click', () => {
-    focusTarget = btn.dataset.target;
-
-    // Update button states
-    document.querySelectorAll('#focusButtons button').forEach(b => {
-      b.classList.toggle('active', b.dataset.target === focusTarget);
-    });
-
-    // Update info panel
-    const body = BODIES[focusTarget];
-    const infoTitle = document.querySelector('.planet-info h4');
-    const infoContent = document.getElementById('infoContent');
-
-    if (body) {
-      infoTitle.textContent = body.name;
-      infoContent.textContent = body.info;
-    } else {
+    const target = btn.dataset.target;
+    if (target === 'free') {
+      focusTarget = 'free';
+      document.querySelectorAll('#focusButtons button').forEach(b => {
+        b.classList.toggle('active', b.dataset.target === 'free');
+      });
+      const infoTitle = document.querySelector('.planet-info h4');
+      const infoContent = document.getElementById('infoContent');
       infoTitle.textContent = 'Free Camera';
       infoContent.textContent = 'Explore the solar system freely';
+    } else {
+      flyTo(target);
     }
   });
 });
+
+// Canvas click to select celestial bodies
+renderer.domElement.addEventListener('click', onCanvasClick);
 
 // Handle resize
 window.addEventListener('resize', () => {
