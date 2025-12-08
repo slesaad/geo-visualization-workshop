@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solar System Simulation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; background: #000; }
+    canvas { display: block; }
+
+    #controls {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 16px;
+      border-radius: 8px;
+      color: white;
+      font-family: sans-serif;
+      font-size: 14px;
+      z-index: 1;
+      min-width: 240px;
+    }
+
+    .control-title {
+      margin-bottom: 12px;
+      font-weight: bold;
+      font-size: 18px;
+    }
+
+    .slider-group {
+      margin-bottom: 12px;
+    }
+
+    .slider-group label {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
+    .button-group {
+      margin-bottom: 12px;
+    }
+
+    button {
+      padding: 8px 16px;
+      margin: 4px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      background: #333;
+      color: white;
+    }
+
+    button:hover {
+      background: #444;
+    }
+
+    button.active {
+      background: #3498db;
+    }
+
+    .info {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #aaa;
+      border-top: 1px solid #444;
+      padding-top: 12px;
+    }
+
+    .planet-info {
+      margin-top: 8px;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+
+    .planet-info h4 {
+      margin-bottom: 4px;
+      color: #3498db;
+    }
+
+    #focusButtons button {
+      display: block;
+      width: 100%;
+      margin: 4px 0;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <div class="control-title">Solar System</div>
+
+    <div class="slider-group">
+      <label>Simulation Speed: <span id="speedValue">1.0</span>x</label>
+      <input type="range" id="speedSlider" min="0" max="10" step="0.1" value="1.0">
+    </div>
+
+    <div class="button-group">
+      <button id="pauseBtn">Pause</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+
+    <div class="slider-group">
+      <label>View Scale: <span id="scaleValue">1.0</span>x</label>
+      <input type="range" id="scaleSlider" min="0.1" max="3" step="0.1" value="1.0">
+    </div>
+
+    <div class="button-group" id="focusButtons">
+      <label style="margin-bottom: 8px;">Focus on:</label>
+      <button data-target="sun" class="active">Sun</button>
+      <button data-target="earth">Earth</button>
+      <button data-target="moon">Moon</button>
+      <button data-target="mars">Mars</button>
+      <button data-target="free">Free Camera</button>
+    </div>
+
+    <div class="info">
+      <div>Drag to orbit &bull; Scroll to zoom</div>
+      <div class="planet-info" id="planetInfo">
+        <h4>Sun</h4>
+        <div id="infoContent">Center of the solar system</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
