@@ -2,23 +2,27 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TIFFLoader } from 'three/addons/loaders/TIFFLoader.js';
 
-// Texture URLs
+// Texture URLs and settings
 const TEXTURES = {
   moon: {
-    color: '/textures/lroc_color_2k.jpg',
-    displacement: '/textures/ldem_16.tif'
+    color: '/textures/lroc_color_poles_4k.tif',
+    bumpMap: '/textures/ldem_16.tif',
+    bumpScale: 1.0
   },
   earth: {
-    color: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Solarsystemscope_texture_8k_earth_daymap.jpg/2880px-Solarsystemscope_texture_8k_earth_daymap.jpg',
-    displacement: null
+    color: '/textures/earth-texture.jpg',
+    bumpMap: '/textures/8081_earthbump2k.jpg',
+    bumpScale: 10.0
   },
   mars: {
-    color: 'https://upload.wikimedia.org/wikipedia/commons/7/70/Solarsystemscope_texture_8k_mars.jpg',
-    displacement: null
+    color: '/textures/marsmap1k.jpg',
+    bumpMap: '/textures/marsbump1k.jpg',
+    normalMap: '/textures/mars_1k_normal.jpg',
+    bumpScale: 10.0,
+    normalScale: 5.0
   },
   sun: {
-    color: 'https://upload.wikimedia.org/wikipedia/commons/c/cb/Solarsystemscope_texture_2k_sun.jpg',
-    displacement: null
+    color: 'https://upload.wikimedia.org/wikipedia/commons/c/cb/Solarsystemscope_texture_2k_sun.jpg'
   }
 };
 
@@ -38,7 +42,7 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
 // Lighting
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
 scene.add(ambientLight);
 
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
@@ -71,14 +75,14 @@ scene.add(stars);
 const textureLoader = new THREE.TextureLoader();
 const tiffLoader = new TIFFLoader();
 
-// Sphere geometry with high detail for displacement
-const sphereGeometry = new THREE.SphereGeometry(1, 3000, 3000);
+// Sphere geometry with high detail for bump/normal mapping
+const sphereGeometry = new THREE.SphereGeometry(1, 256, 256);
 
 // Current state
 let currentBody = 'moon';
 let isRotating = true;
 let displacementEnabled = true;
-let displacementScale = 0.03;
+let displacementScale = 1.0;
 let sphere = null;
 
 // Load textures and create materials cache
@@ -120,27 +124,39 @@ async function createMaterial(bodyName) {
   const colorTexture = await loadTexture(bodyTextures.color);
 
   let material;
+  const hasBumpMap = bodyTextures.bumpMap != null;
+  const hasNormalMap = bodyTextures.normalMap != null;
 
-  if (bodyName === 'moon' && bodyTextures.displacement) {
-    // Moon with displacement mapping
-    // Load displacement as data texture (no color space conversion)
-    const displacementTexture = await loadTexture(bodyTextures.displacement, true);
-
-    material = new THREE.MeshStandardMaterial({
+  if (hasBumpMap || hasNormalMap) {
+    const materialOptions = {
       map: colorTexture,
-      displacementMap: displacementTexture,
-      displacementScale: displacementEnabled ? displacementScale : 0,
-      displacementBias: -0.5 * displacementScale, // Center the displacement
       roughness: 0.8,
       metalness: 0.1
-    });
+    };
+
+    // Load and apply bump map if provided
+    if (hasBumpMap) {
+      const bumpTexture = await loadTexture(bodyTextures.bumpMap, true);
+      materialOptions.bumpMap = bumpTexture;
+      materialOptions.bumpScale = displacementEnabled ? (bodyTextures.bumpScale || 1.0) : 0;
+    }
+
+    // Load and apply normal map if provided (takes priority for lighting)
+    if (hasNormalMap) {
+      const normalTexture = await loadTexture(bodyTextures.normalMap, true);
+      materialOptions.normalMap = normalTexture;
+      const nScale = bodyTextures.normalScale || 1.0;
+      materialOptions.normalScale = new THREE.Vector2(nScale, nScale);
+    }
+
+    material = new THREE.MeshStandardMaterial(materialOptions);
   } else if (bodyName === 'sun') {
     // Sun is emissive
     material = new THREE.MeshBasicMaterial({
       map: colorTexture
     });
   } else {
-    // Other planets
+    // Other planets without maps
     material = new THREE.MeshStandardMaterial({
       map: colorTexture,
       roughness: 0.7,
@@ -159,9 +175,18 @@ async function switchBody(bodyName) {
     btn.classList.toggle('active', btn.dataset.body === bodyName);
   });
 
-  // Show/hide displacement controls
+  // Show/hide bump controls based on whether this body has a bump or normal map
   const displacementControls = document.getElementById('displacementControls');
-  displacementControls.style.display = bodyName === 'moon' ? 'block' : 'none';
+  const hasBumpMap = TEXTURES[bodyName]?.bumpMap != null;
+  const hasNormalMap = TEXTURES[bodyName]?.normalMap != null;
+  displacementControls.style.display = (hasBumpMap || hasNormalMap) ? 'block' : 'none';
+
+  // Update slider to show body-specific bump scale
+  if (hasBumpMap) {
+    displacementScale = TEXTURES[bodyName].bumpScale || 1.0;
+    document.getElementById('displacementScale').value = displacementScale;
+    document.getElementById('scaleValue').textContent = displacementScale.toFixed(1);
+  }
 
   // Update texture info
   const textureInfo = document.getElementById('textureInfo');
@@ -183,11 +208,12 @@ async function switchBody(bodyName) {
 }
 
 function updateDisplacement() {
-  if (currentBody === 'moon' && materialsCache.moon) {
+  // Update bump scale for any body that has a bump map
+  const hasBumpMap = TEXTURES[currentBody]?.bumpMap != null;
+  if (hasBumpMap && materialsCache[currentBody]) {
     const scale = displacementEnabled ? displacementScale : 0;
-    materialsCache.moon.displacementScale = scale;
-    materialsCache.moon.displacementBias = -0.5 * scale;
-    materialsCache.moon.needsUpdate = true;
+    materialsCache[currentBody].bumpScale = scale;
+    materialsCache[currentBody].needsUpdate = true;
   }
 }
 
