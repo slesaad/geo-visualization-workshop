@@ -312,7 +312,7 @@ export default function App() {
     new ScenegraphLayer({
       id: 'taxi',
       data: taxiData,
-      scenegraph: '/taxi/scene.gltf',
+      scenegraph: `${import.meta.env.BASE_URL}taxi/scene.gltf`,
       getPosition: d => [...d.position, 0],
       getOrientation: d => [0, 180 - d.bearing, 90],
       sizeScale: 3,

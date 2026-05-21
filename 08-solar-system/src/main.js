@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TIFFLoader } from 'three/addons/loaders/TIFFLoader.js';
 
+const BASE = import.meta.env.BASE_URL;
+
 // Celestial body configuration
 // Distances and sizes are scaled for visualization (not to actual scale)
 const BODIES = {
@@ -34,8 +36,8 @@ const BODIES = {
     distance: 30,
     orbitalPeriod: 365, // days
     rotationPeriod: 1,
-    color: '/textures/earth-texture.jpg',
-    bumpMap: '/textures/8081_earthbump2k.jpg',
+    color: BASE + 'textures/earth-texture.jpg',
+    bumpMap: BASE + 'textures/8081_earthbump2k.jpg',
     bumpScale: 10.0,
     info: 'Earth - Our home planet, third from the Sun',
     // Detail panel data
@@ -59,8 +61,8 @@ const BODIES = {
     orbitalPeriod: 27.3, // days around Earth
     rotationPeriod: 27.3, // tidally locked
     orbitAround: 'earth',
-    color: '/textures/lroc_color_poles_4k.tif',
-    bumpMap: '/textures/ldem_16.tif',
+    color: BASE + 'textures/lroc_color_poles_4k.tif',
+    bumpMap: BASE + 'textures/ldem_16.tif',
     bumpScale: 0.1,
     info: 'The Moon - Earth\'s only natural satellite',
     // Detail panel data
@@ -83,9 +85,9 @@ const BODIES = {
     distance: 50,
     orbitalPeriod: 687, // days
     rotationPeriod: 1.03,
-    color: '/textures/marsmap1k.jpg',
-    bumpMap: '/textures/marsbump1k.jpg',
-    normalMap: '/textures/mars_1k_normal.jpg',
+    color: BASE + 'textures/marsmap1k.jpg',
+    bumpMap: BASE + 'textures/marsbump1k.jpg',
+    normalMap: BASE + 'textures/mars_1k_normal.jpg',
     bumpScale: 10.0,
     normalScale: 5.0,
     info: 'Mars - The Red Planet, fourth from the Sun',

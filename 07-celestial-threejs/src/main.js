@@ -2,22 +2,24 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TIFFLoader } from 'three/addons/loaders/TIFFLoader.js';
 
+const BASE = import.meta.env.BASE_URL;
+
 // Texture URLs and settings
 const TEXTURES = {
   moon: {
-    color: '/textures/lroc_color_poles_4k.tif',
-    bumpMap: '/textures/ldem_16.tif',
+    color: BASE + 'textures/lroc_color_poles_4k.tif',
+    bumpMap: BASE + 'textures/ldem_16.tif',
     bumpScale: 1.0
   },
   earth: {
-    color: '/textures/earth-texture.jpg',
-    bumpMap: '/textures/8081_earthbump2k.jpg',
+    color: BASE + 'textures/earth-texture.jpg',
+    bumpMap: BASE + 'textures/8081_earthbump2k.jpg',
     bumpScale: 10.0
   },
   mars: {
-    color: '/textures/marsmap1k.jpg',
-    bumpMap: '/textures/marsbump1k.jpg',
-    normalMap: '/textures/mars_1k_normal.jpg',
+    color: BASE + 'textures/marsmap1k.jpg',
+    bumpMap: BASE + 'textures/marsbump1k.jpg',
+    normalMap: BASE + 'textures/mars_1k_normal.jpg',
     bumpScale: 10.0,
     normalScale: 5.0
   },
