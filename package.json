@@ -1,0 +1,12 @@
+{
+  "name": "visualization-workshop",
+  "version": "1.0.0",
+  "description": "Interactive visualization workshop with deck.gl and Three.js",
+  "scripts": {
+    "dev": "./start-all.sh",
+    "build": "./build-all.sh",
+    "preview": "npx serve dist"
+  },
+  "keywords": ["deck.gl", "three.js", "visualization", "webgl"],
+  "license": "MIT"
+}

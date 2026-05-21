@@ -303,6 +303,11 @@
   </div>
 
   <script type="module">
+    // Base path - all chapters are sibling folders under the gallery's base.
+    // In production, Vite replaces import.meta.env.BASE_URL with whatever --base was
+    // passed at build time (e.g. "/geo-visualization-workshop/"). In dev it is "/".
+    const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+
     // Chapter configurations
     const chapters = [
       {
@@ -439,9 +444,11 @@
 
       modal.classList.add('active');
 
-      // Load iframe
+      // Load iframe with chapter URL
       const iframe = document.createElement('iframe');
-      iframe.src = `http://localhost:${chapter.port}/`;
+      const chapterUrl = `${basePath}/${chapter.folder}/`;
+
+      iframe.src = chapterUrl;
 
       let loaded = false;
 
@@ -458,28 +465,10 @@
       iframe.onerror = () => {
         modalContent.innerHTML = `
           <div class="loading">
-            <span>Failed to load. Make sure the dev server is running:<br><br>
-            <code style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 4px;">
-              cd ${chapter.folder} && npm run dev
-            </code></span>
+            <span>Failed to load chapter. Please try again.</span>
           </div>
         `;
       };
-
-      // Set a timeout in case the server isn't running
-      setTimeout(() => {
-        if (modalContent.querySelector('.loading .spinner')) {
-          modalContent.innerHTML = `
-            <div class="loading" style="flex-direction: column; text-align: center;">
-              <span style="margin-bottom: 20px;">Server might not be running. Start it with:</span>
-              <code style="background: rgba(255,255,255,0.1); padding: 15px 25px; border-radius: 4px; font-size: 1rem;">
-                cd ${chapter.folder} && npm run dev
-              </code>
-              <span style="margin-top: 20px; opacity: 0.6;">Then click this card again</span>
-            </div>
-          `;
-        }
-      }, 5000);
 
       modalContent.appendChild(iframe);
     }
